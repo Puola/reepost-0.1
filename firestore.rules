@@ -1,0 +1,59 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidSocialAccount() {
+      let requiredFields = [
+        'userId', 'platform', 'username', 'accessToken', 
+        'refreshToken', 'expiresAt'
+      ];
+      return request.resource.data.keys().hasAll(requiredFields) 
+        && isOwner(request.resource.data.userId);
+    }
+
+    // Allow authenticated users to read and write their own workflows
+    match /workflows/{workflowId} {
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isOwner(resource.data.userId);
+    }
+
+    // Allow authenticated users to read and write their own user data
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      allow create: if isSignedIn() && request.resource.data.subscriptionPlan.currentPlan == 'free';
+      allow update: if isOwner(userId) && (
+        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['subscriptionPlan']) ||
+        request.auth.token.admin == true
+      );
+    }
+
+    // Social accounts security rules
+    match /social_accounts/{accountId} {
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update: if isOwner(resource.data.userId) 
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['accessToken', 'refreshToken', 'expiresAt']);
+      allow delete: if isOwner(resource.data.userId);
+    }
+
+    // Allow authenticated users to read and write their own sessions
+    match /sessions/{sessionId} {
+      allow read, write: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    // Allow authenticated users to read and write their own invitations
+    match /invitations/{invitationId} {
+      allow read, write: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+  }
+}

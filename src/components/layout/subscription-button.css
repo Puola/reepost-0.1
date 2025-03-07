@@ -1,0 +1,32 @@
+/* Neon border animation */
+.subscription-button {
+  overflow: hidden;
+}
+
+.neon-border {
+  position: absolute;
+  inset: 0;
+  border: 2px solid transparent;
+  border-radius: 0.5rem;
+  animation: neon-glow 2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes neon-glow {
+  0% {
+    clip-path: inset(0 100% 0 0);
+    border-color: #FC4A1A;
+    box-shadow: 0 0 5px #FC4A1A;
+  }
+  25% {
+    clip-path: inset(0 0 100% 0);
+  }
+  50% {
+    clip-path: inset(0 0 0 100%);
+  }
+  75% {
+    clip-path: inset(100% 0 0 0);
+  }
+  100% {
+    clip-path: inset(0 100% 0 0);
+  }
+}
